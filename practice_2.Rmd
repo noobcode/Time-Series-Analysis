@@ -1,0 +1,85 @@
+---
+title: "Homework2: Simulation of time series"
+author: "Carlo Alessi"
+output:
+  pdf_document:
+    fig_caption: yes
+---
+
+
+\section{A) IID and Gaussian white noises}
+\paragraph{}
+The following code chunk generates samples from different kind of Gaussian distributions. First I set the seed with value $m=2$ to allow the generated numbers to be the same from run to run. Then I specify different sample sizes (e.g. $n_1=100$, $n_2=500$ and $n_3=1000$). Finally I generate three random samples from different Gaussian distributions $N(\mu, \sigma)$, $z_1$, $z_2$ and $z_3$, with size $n_1$, $n_2$ and $n_3$ respectively, such that:
+$$  z_1 \sim N(1, 2)  $$ $$ z_2 \sim N(5, 5) $$ $$  z_3 \sim N(10, 5) $$
+
+```{r}
+# set seed
+m <- 2
+set.seed(m)
+
+# sample sizes
+n1 <- 100
+n2 <- 500
+n3 <- 1000
+# means
+mu1 <- 1
+mu2 <- 5
+mu3 <- 10
+# standard deviations
+sigma1 <- 2
+sigma2 <- 5
+sigma3 <- 5
+
+# generate samples from different Gaussian distributions
+z1 <- rnorm(n1, mean = mu1, sd=sigma1)
+z2 <- rnorm(n2, mean = mu2, sd=sigma2)
+z3 <- rnorm(n3, mean = mu3, sd=sigma3)
+```
+
+\paragraph{}
+Figures \ref{fig:z_1}, \ref{fig:z_2} and \ref{fig:z_3} below show the plots of the generated samples. It is clear to see from the plots that the amplitude of the curves of a time series are proportional to the value of the standard deviation $\sigma$, whereas the average position of the curve along the ordinates is determined by the value of the mean $\mu$.
+
+```{r fig.cap=c("sample from a Gaussian with mean 1 and std 2. \\label{fig:z_1}", "sample from a Gaussian with mean 5 and std 5. \\label{fig:z_2}", "sample from a Gaussian with mean 10 and std 5. \\label{fig:z_3}")}
+plot(z1, type="l", xlab = "sample", ylab ="value")
+plot(z2, type="l", xlab = "sample", ylab ="value")
+plot(z3, type="l", xlab = "sample", ylab ="value")
+```
+
+\paragraph{Histograms}
+Then we can visualize the histograms of the generated samples ($z_1$, $z_2$ and $z_3$), and compare them with the corresponding underlying distribution that they were gerenated from. The following code chunks serve this purpose, and the results are shown in figure \ref{fig:hist_1}, \ref{fig:hist_2} and \ref{fig:hist_3}. In general we can note that the bigger the sample the more the histogram shape resembles the shape of the underlying distribution. On the other hand, the bigger the standard deviation, the smaller is the resemblance.
+
+```{r fig.cap="Comparison between the histogram of the sample z1 and the underlying distribution. \\label{fig:hist_1}"}
+x <- seq(-4, 6, length=1000)
+hist(z1, freq=F, ylim = c(0, 0.2)); 
+points(x, dnorm(x, mu1, sigma1), type="l")
+```
+
+```{r fig.cap="Comparison between the histogram of the sample z2 and the underlying distribution. \\label{fig:hist_2}"}
+x <- seq(-10, 20, length=1000)
+hist(z2, freq = F, ylim = c(0, 0.1)); 
+points(x, dnorm(x, mu2, sigma2), type="l")
+```
+
+```{r fig.cap="Comparison between the histogram of the sample z3 and the underlying distribution. \\label{fig:hist_3}"}
+x <- seq(-10, 30, length=1000)
+hist(z3, freq = F, ylim = c(0, 0.1)); 
+points(x, dnorm(x, mu3, sigma3), type="l")
+```
+
+\paragraph{Correlograms}
+In the following code chunks we compute and visualize the correlogram, $\left\{\rho(l), l \geq 0 \right\}$, for each of the samples $z_1$, $z_2$ and $z_3$. The function $\rho(l) = \frac{\gamma(l)}{\gamma(0)}, l \geq 0$ is the autocorrelation function of lag $l$, where $\gamma(l) = C(X_k, X_{k+l}), \forall k,l \in Z$ is the covariance of $X_k$ and $X_{k+l}$. The correlograms are shown in figure \ref{fig:corr_1}, \ref{fig:corr_2} and \ref{fig:corr_3} respectively. From the plots we can see that, of course, $\rho(0) = 1$, but for the other values of lag $l$ the autocorrelation is very small and it does not have a clear pattern. Indeed this is justified by the fact that the samples where randomly generated.
+
+```{r fig.cap=c("correlogram of sample z1. \\label{fig:corr_1}", "correlogram of sample z2. \\label{fig:corr_2}", "correlogram of sample z3. \\label{fig:corr_3}")}
+acf(z1, ylab="autocorrelation function")
+acf(z2, ylab="autocorrelation function")
+acf(z3, ylab="autocorrelation function")
+```
+
+\section{B) Random walk}
+Now for each time series we construct the so called Random Walk, i.e the series $\left\{S_n, n \geq 0\right\}$, where $S_n = \sum_{i=0}^{n} X_i$ is the series of the cumulative sum. The plots of the random walks are shown in figure \ref{fig:rw_1}, \ref{fig:rw_2} and \ref{fig:rw_3} respectively for the series $z_1$, $z_2$ and $z_3$.
+```{r fig.cap=c("random walk of series z1 \\label{fig:rw_1}", "random walk of series z2 \\label{fig:rw_2}", "random walk of series z3 \\label{fig:rw_3}")}
+# {S_n = X_1 + ... + X_n}
+plot(cumsum(z1), type="l", ylab = "cumulative sum of z1")
+plot(cumsum(z2), type="l", ylab = "cumulative sum of z2")
+plot(cumsum(z3), type="l", ylab = "cumulative sum of z3")
+```

@@ -1,0 +1,140 @@
+---
+title: 'Homework 5: AR(p) models'
+author: "Carlo Alessi"
+output:
+  pdf_document:
+    fig_caption: yes
+    number_sections: true
+---
+\section{Simulating AR(p) models}
+The code chunks below simulate several time series from an AR(2) model, and compute their autocorrelation function. Figure \ref{fig:ar2_corr_1} shows a time series of size $n=1000$ generated from an AR(2) model with parameters $\phi_1 = 0.8897$ and $\phi_2 = - 0.4858$.
+
+```{r fig.cap="AR(2) model with parameters $(\\phi_1, \\phi_2) = (0.8897, -0.4858)$ and its correlogram.\\label{fig:ar2_corr_1}"}
+layout(2:1)
+n <- 1000
+x <- arima.sim(list(ar = c(0.8897, -0.4858), sd = sqrt(0.1796)), n)
+plot(x,type="l")
+acf(x)
+```
+
+
+Figure \ref{fig:ar2_corr_2} shows a time series of size $n=100$ generated from an AR(2) model with parameters $\phi_1 = 0.5$ and $\phi_2 = - 0.5$.
+```{r fig.cap="AR(2) model with paramenters $(\\phi_1, \\phi_2) = (0.5, -0.5)$ and its correlogram.\\label{fig:ar2_corr_2}"}
+layout(2:1)
+n <- 100
+y<-arima.sim(list(ar = c(0.5, -0.5), sd = sqrt(3)), n)
+plot(y,type="l")
+acf(y)
+```
+
+Figure \ref{fig:ar2_corr_3} shows a time series of size $n=500$ generated from an AR(2) model with parameters $\phi_1 = 0.7$ and $\phi_2 = - 0.2$.
+```{r fig.cap="AR(2) model with paramenters $(\\phi_1, \\phi_2) = (0.7, -0.2)$ and its correlogram.\\label{fig:ar2_corr_3}"}
+layout(2:1)
+n <- 500
+z <- arima.sim(list(ar = c(0.7, -0.2), sd = sqrt(2)), n)
+plot(z,type="l")
+acf(z)
+```
+
+\section{Fitting AR(p) models}
+The following code chunks fit the time series generated in the previous section (x,y,z) with an AR(2) model using Maximum Likelihood.
+```{r}
+s1<-arima(x, order=c(2,0,0), method="ML")
+s1
+```
+
+```{r}
+s2<-arima(y, order=c(2,0,0), method="ML")
+s2
+```
+
+```{r}
+s3<-arima(z, order=c(2,0,0), method="ML")
+s3
+```
+
+The following code chunks give an alternative method to fit an autoregressive time series using Maximum Likelihood Estimation. In the first chunk the data is fit using a second order model, whereas in the second chunk it is used a third order model. Since a second order model is sufficient, the results do not change.
+```{r}
+ar(x, order.max=2, method="mle")
+```
+```{r}
+ar(x, order.max=3, method="mle")
+```
+
+The following code chunk simulate an ARIMA model with AR and MA coefficients respectively -0.6 and 0.5 (see figure \ref{fig:arima}).
+```{r fig.cap="ARIMA model with coefficients $(ar, ma) = (-0.6, -0.5)$.\\label{fig:arima}"}
+n<-10000
+x<-arima.sim(list(ar=-0.6, ma=0.5), n)
+plot(x,type="l")
+coef(arima(x,order=c(1,0,1)))
+```
+\section{Validation}
+In the following code chunk it is applied the Ljung-Box test to the time series shown in figure \ref{fig:arima}.
+It can be seen that the IID noise hypothesis has been rejected since the p-value is less than 0.05.
+```{r}
+h<-floor(log(n))
+Box.test(x, lag=h, type=c("Ljung-Box"))
+```
+In the following code chunks we apply the Ljung-Box test to a time series $X$ simulated from an AR(2) model with parameters $(\phi_1, \phi_2) = (0.8897, - 0.4858)$ (see figure \ref{fig:ar2_corr_1}). Then the test is applied to the residuals of the AR(2) model used to fit $X$. The IID noise hypothesis is accepted for the residuals and rejected on the original time series.
+```{r}
+n <- 1000
+x <- arima.sim(list(ar = c(0.8897, -0.4858), sd = sqrt(0.1796)), n)
+#plot(x,type="l")
+
+s <- arima(x, order=c(2,0,0), method="ML")
+s
+
+y<-resid(s) # extract residuals from fitted model
+
+h<-floor(log(n))
+Box.test(x,lag=h, type=c("Ljung-Box"))
+Box.test(y,lag=h,type=c("Ljung-Box"))
+```
+
+\section{Selection of the best AR(p) model}
+The instruction selects the best AR between AR(1), AR(2) and AR(3) to fit data x (see figure \ref{fig:ar2_corr_1}). The solution is an AR(2).
+```{r fig.cap="AR"}
+n<-1000
+x<-arima.sim(list(ar = c(0.8897, -0.4858), sd = sqrt(0.1796)), n)
+#plot(x,type="l")
+ss1 <- ar(x, order.max=3, method="mle")
+ss1
+```
+
+\section{A complete analysis with real data}
+The following time series reppresents annual measurements of the Lake Huron level (in feet). The graph of the time series and its correolagram is shown in figure \ref{fig:lake}.
+```{r}
+x <- LakeHuron
+x
+```
+
+```{r fig.cap="Annual measurements of the Lake Luron level (in feet).\\label{fig:lake}"}
+layout(2:1)
+plot (x, ylab="depth", xlab="time")
+acf(x)
+```
+
+In figure \ref{fig:lake_lag} are shown plots of the Lake Huron time series against lagged version of itself (e.g $(x_{i-l}, x_i)$ for lags $l = 1,...,4$). As the lag increases the linear trend disappears.
+```{r fig.cap="Time series lag plot of Lake Huron data. \\label{fig:lake_lag}"}
+lag.plot (x, lag=4, do.lines=F)
+```
+
+
+
+Then we fit an AR(1) model to the time series using the Yule-Walker method.
+```{r}
+s1<-ar(x, order.max=1, method="yw")
+s1
+```
+
+The following code chunks fit an AR(p) model to the time series using the Maximum Likelihood Estimation and the Yule-Walker. Both methods propose an AR(2) model with similar parameter.
+```{r}
+s3<-ar(x, method="mle")
+s3
+```
+
+```{r}
+s4<-ar(x, method="yw")
+s4
+```
+

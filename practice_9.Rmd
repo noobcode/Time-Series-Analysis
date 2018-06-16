@@ -1,0 +1,140 @@
+---
+title: "Practice 9: Time series forecasting"
+author: "Carlo Alessi"
+output:
+  pdf_document:
+    fig_caption: yes
+    number_sections: true
+---
+\section{Choose p and q and simulate an ARMA (p,q) model}
+The following code chunk simulates an ARMA(p,q) model of size $n=1000$, with $p=2$ and $q=1$, and parameters $(\phi_1,\phi_2) = (0.3,0.2)$ and $\theta=–0.3$. The time series is shown in figure \ref{fig:arma21}. 
+
+```{r, fig.cap="Time series generated from ARMA(2,1) model with $(\\phi_1,\\phi_2) = (0.3,0.2)$ and $\\theta = – 0.3$.\\label{fig:arma21}"}
+library(forecast)
+
+p <- 2
+q <- 1
+n <- 1000
+
+x <- arima.sim(list(order=c(p,0,q), ar=c(0.3,0.2), ma=0.3), n)
+plot (x)
+```
+
+The generated time series is then fit with the best ARIMA model. 
+```{r}
+y <- auto.arima(x)
+y
+```
+
+We check that the residuals of the fitted ARIMA model are an IID noise using the Ljung-Box test. The test passes since the p-value is much greater than 0.05.
+
+```{r}
+# check that the residuals are iid noise
+z <- resid(y)
+Box.test(z, lag=log(n), type=c("Ljung-Box"))
+```
+
+In the following code chunk the time series is forecasted up to 10 future observations. Figure \ref{fig:forecasting} shows the original time series generated before (see figure \ref{fig:arma21}) along with the prediction of the next 10 observations (shown in blue).
+
+```{r, fig.cap="Time series forecasting. \\label{fig:forecasting}"}
+xfc <- forecast(x)
+plot (xfc)
+frequency(x)
+```
+
+A summary of the forecasting and the predicted points is shown below.
+
+```{r}
+summary(xfc)
+```
+
+
+\subsection{Example}
+In this example it is simulated an ARMA(1,1) model of size $n=1000$, with parameters $\phi=0.8$ and $\theta=-0.3$. The time series is shown in figure \ref{fig:example_1} (top). The plot of the residuals of the best ARIMA model that fits the series is shown in figure \ref{fig:example_1} (middle). Figure \ref{fig:example_1} (bottom) shows the forecasting of the 10 future observations. The outuput code shows that the Ljung-Box test applied on the series rejects the iid noise hypothesis, and reports the results of fitting the best ARIMA model to the time series.
+
+```{r fig.cap="Simulated ARMA(1,1) model with $\\phi=0.8$ and $\\theta=-0.3$, residuals and forecasting.\\label{fig:example_1}"}
+layout(1:3)
+n<-1000
+x<-arima.sim(list(order=c(1,0,1), ar=c(0.8), ma=c(0.3)), n)
+plot(x, type="l")
+Box.test(x, lag=log(n), type=c("Ljung-Box"))
+
+y <- auto.arima(x)
+y
+
+z <- resid(y)
+plot(z)
+Box.test(z, lag=log(n), type=c("Ljung-Box"))
+
+xfc<-forecast(x)
+plot(xfc, type="l")
+```
+
+\section{Doing the same with real data}
+In this example we forecast the lake Huron time series (see figure \ref{fig:lake}).
+In the code chunk below, first we fit an ARIMA model to the time series, then we check that the residuals are an IID noise.
+The forecasted points lie in a straight line and do not follow the ups and downs of the time series.
+```{r fig.cap="Lake Huron time series, residuals and forecasting.\\label{fig:lake}", fig.subcap=c("Time series", "residuals", "Forecasting 10 future points")}
+layout(1:3)
+y<-LakeHuron
+plot(y)
+
+# fit ARIMA model
+lh <- auto.arima(y)
+lh
+
+# residuals
+z <- resid(lh)
+plot(z,type="l")
+# check that z is an IID noise
+h <- log(length(y))
+Box.test(z, lag=h, type=c("Ljung-Box"))
+
+# forecasting
+lhfc <- forecast(lh)
+plot(lhfc)
+```
+
+\subsection{Example: improving the randomness of the residuals}
+In the following example it is still analyzed the LakeHuron time series, but this time an ARIMA(1,1,1) is used to fit the time series, in order to improve the randomness of the residuals. The plots of the time series, the residuals and the forecasting are shown in figure \ref{fig:improved_res}.
+```{r, fig.cap="Lake Huron time series forecasting with improved residuals.\\label{fig:improved_res}"}
+layout(1:3)
+x<-LakeHuron
+plot(x,type="l")
+
+lh <- arima(x, order=c(1,1,1), method="ML")
+lh
+
+# residuals
+z <- resid(lh)
+plot(z,type="l")
+h <- log(length(x))
+Box.test(z,lag=h, type=c("Ljung-Box"))
+# forcast
+lhfc<-forecast(lh)
+plot(lhfc)
+```
+
+\section{Fit best ARIMA model to time serieses}
+In this section the Nile and WWWusage time series are fit with the best ARIMA(p,d,q) models. The components $p$, $d$ and $q$ are respectively the AR order, the degree of differencing and the MA order.
+
+\subsection{Nile time series}
+The Nile time series (see figure \ref{fig:nile}) is fitted with an ARIMA(1,1,1) ($p=1$, $d=1$, $q=1$), with parameters $\phi = 0.2544$ and $\theta = 0.8741$. 
+```{r, fig.cap="Nile time series.\\label{fig:nile}"}
+x <- Nile
+plot.ts(x)
+
+y <- auto.arima(x)
+y
+```
+
+\subsection{WWWusage time series}
+The WWWusage time series (see figure \ref{fig:www}) is fitted with an ARIMA(1,1,1) ($p=1$, $d=1$, $q=1$), with parameters $\phi = 0.6504$ and $\theta = - 0.5256$. 
+```{r fig.cap="WWWusage time series.\\label{fig:www}"}
+x <- WWWusage
+plot.ts(x, type='o')
+
+y <- auto.arima(x)
+y
+```
+

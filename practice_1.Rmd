@@ -1,0 +1,181 @@
+---
+title: 'Homework1: Time Series in R'
+author: "Carlo Alessi"
+output:
+  pdf_document:
+    fig_caption: yes
+---
+For each section of this presentation, first I introduce the relevant theory and make some consideration if necessary. Then I show the code (and its output) applying the concepts just mentioned to a specific time series. 
+
+\section{1. Introduction. Reading data in RStudio.}
+The following code chunk reads the \textit{Airline} dataset from a file called \textit{Air\_passengers.xlsx} and stores it into a DataFrame \textit{Air\_passengers}. The dataset is composed of 3 columns and 144 rows. The columns are \textbf{Time} (the ID of the observation), \textbf{Date} (the date of the observation, one for each month) and \textbf{Passengers} (the number of passengers). Each row corresponds to an observation. The output of the code shows the first five observations.
+
+```{r}
+library(readxl)
+Air_passengers <- read_excel("~/Documents/UNIPI/MSc/Barcellona/TSA/Air_passengers.xlsx")
+head(Air_passengers, 5)
+```
+
+Then, we construct a time series object from the dataset, starting from the year 1949, taking 12 observations per time unit
+(i.e. one per month). The produced time series is shown below.
+
+```{r}
+x <- Air_passengers$Passengers
+t <- Air_passengers$Date
+xt <- ts(x, start = 1949, frequency = 12)
+xt
+```
+
+\section{2. Graphical representation.}
+In Figure \ref{fig:ts_plot} is shown the graph of the Airline Passengers time series.
+
+```{r fig.cap = "Time series of the Airline Passengers. \\label{fig:ts_plot}"}
+plot(xt, xlab="time", ylab="passengers", type="o")
+```
+
+Figure \ref{fig:boxplot} (top) shows the aggregate (row-wise) sum of the elements of the time series.
+The plot shows that the number of passengers increased overtime, year by year. Moreover figure \ref{fig:boxplot} (bottom) shows the
+box-and-wiskers plot (one box per plot). It can be seen that there are no outliers, and the peak of flights occur during the months
+of June, July and August, as expected.
+
+```{r fig.cap = "(top) Time series of the aggregate month-wise sums. (bottom) Passenger distribution via Box-plot. \\label{fig:boxplot}"}
+layout(1:2)
+# aggregate sums the the elements of the time series row-wise, so year by year.
+plot(aggregate(xt), xlab = "year", ylab= "passengers", type="o")
+# passengers distributions month by month.
+boxplot(xt~cycle(xt), xlab = "month", ylab = "passengers")
+```
+
+\section{3. Transform a time series}
+The most common transformation of time series is the log-transformation. The biggest benefits are that it deletes
+exponential trends and transforms products into sums. Figure \ref{fig:log_ts} shows the logarithmic transformation applied to the Airline passengers time series. It is clear to see that the transformation also maintains the shape of the graph of the original time series (see Figure \ref{fig:ts_plot}).
+
+```{r fig.cap = "log transformation of the Time series. \\label{fig:log_ts}"}
+y <- log(x)
+plot(t, y, xlab = "time", ylab = "log-passengers", type="o")
+```
+
+\section{4. Estimating a linear trend}
+To estimate the linear trend of a time series, $\left\{y_i, i \geq 0 \right\}$, we can fit the targets $y$ with a linear model (e.g using the least squares method) with the command \textit{lm()}. As shown in the output of the code chunk below, the learned model is the line: $y = 0.01005 t + 4.81367$, which is the trend of the time series. Figure \ref{fig:ts_trend} shows the time series along with its trend.
+
+```{r fig.cap= "Time series and estimated trend. The curve reppresents the observed time series, whereas the straight line represents its trend. \\label{fig:ts_trend}"}
+line = lm(y~t) # fits the targets "y" with a linear model
+summary(line)
+plot(t, y, type="o", xlab = "time", ylab = "passengers", col="red");
+legend( x = 10, y = 6.2, legend = c("observations", "fitted model"), col=c("red", "blue"), lty = 1:2)
+abline(line, col ="blue")
+```
+
+
+\subsection{Extracting the trend from the logarithmic data}
+Given a time series $X_i$ with trend $T_i$, cycles $C_i^j$ and residuals $R_i$, it is possible to extract its trend in the following way:
+\begin{itemize}
+\item apply log-transformation to the time series, so that we can express it as $$ X_i = T_i + C_i^1 + ... + C_i^k + R_i  $$
+\item fit a model to the transformed time series (e.g. a line) to obtain the trend $T_i$
+\item subtract the trend from the time series to obtain $X_i = C_i^1 + ... + C_i^k + R_i$
+\end{itemize}
+
+The result of this procedure is shown in figure \ref{fig:ts_no_t}. It can be seen that the increasing trend of the original time series is disappeared.
+
+```{r fig.cap= "Airline passenger time series without trend component. \\label{fig:ts_no_t}"}
+t <- 1:length(x)
+y <-log(x)
+trend <- 0.01005*t + 4.81367
+z <- y - trend  # remove trend
+
+plot.ts(z, ylab="passengers")
+```
+
+\section{5. Estimating the seasonal component}
+In this section is identified a particular kind of cyclic behavior, the seasonal component.
+Assuming $m$ years of data, a period length $p=12$ and $n=mp$ data points, the seasonal component $\left\{s_i, i >= 1\right\}$ is directly identified performing the following steps: 
+\begin{itemize}
+\item find monthly means $$ e_i = \frac{1}{m} \sum_{j=0}^{m-1} x_{i+pj}, i = 1, ...,p  $$
+\item find mean of monthly means $$ \bar{e} = \frac{1}{p} \sum_{i=1}^{p}e_i  $$
+\item get centred seasonal component $s_i = e_i - \bar{e}$
+\end{itemize}
+
+Figure \ref{fig:season} shows the estimated seasonal component. Again it can be seen that the highest values are achieved during the summer months. Subsequently the seasonal component decreases until November, and then it increases again near the beginning of the Christmas holidays.
+
+```{r fig.cap="estimated seasonal component. \\label{fig:season}"}
+dim(z) <- c(12,12) # convert the series into a 12 by 12 matrix
+e <- apply(z, 1, mean) # compute mean over the months
+ee <- mean(e)
+seasonal_component <- e - ee # centred
+plot(seasonal_component, type="o", xlab = "month")
+```
+
+\paragraph{}
+In order to erase the seasonal component, we repeatedly use the seasonal component vector to fill an array of size \textit{n=mp}. The plot of the obtained vector is shown in figure \ref{fig:repeat_season}, which is the same as the plot shown in figure \ref{fig:season}, but repeated 12 times.
+
+```{r fig.cap="seasonal component repeated m=12 times. \\label{fig:repeat_season}"}
+# use seasonal component to fill an array containing the several copies of the seasonal component
+est <- array(seasonal_component, 144)  
+plot(est, type="o")
+```
+
+\paragraph{}
+Finally, we remove the seasonal component from the time series
+$$ X_i = C_i^1 + ... + C_i^k + R_i $$ and obtain $X_i = C_i^2 + ... + C_i^k + R_i$, without trend and seasonal component, as shown in figure \ref{fig:no_season}.
+
+```{r fig.cap="Time series without trend and seasonal component. \\label{fig:no_season}"}
+# Finally remove the seasonal component from the series
+dim(z) <- 144 # flatten the matrix back into array form
+u <- z - est  # remove seasonality component (a particular kind of cycle)
+
+plot.ts(u, ylab = "passengers")
+```
+
+\section{6. Filtering}
+Another way of removing the seasonal component is by applying a symmetric moving average filter to the time series, defined below: $$ A_q(x_i) := \frac{1}{2q + 1} \sum_{j=-q}^{q}x_{i+j}  $$
+In figure \ref{fig:filter12} it is applied a filter of size \textit{q=12}, whereas in figure \ref{fig:filters} is shown the effect of applying filters of different sizes.
+The filtered time series are gradually smoother than the original one (increasing the size of the filter till the right value) and better highlight the trend.
+
+```{r fig.cap="Filtered time series with q=12. \\label{fig:filter12}"}
+# convolve the time series with a filter of size 12
+v <- filter(x, sides=2, rep(1,12)/12)
+plot(v, ylab="filtered time series")
+```
+
+```{r fig.cap="comparison of moving average filters of size 3, 5, and 7. \\label{fig:filters}"}
+# comparison of different filter sizes
+filter_sizes <- seq(from=3, to=7, by=2)
+layout(1:3)
+for (fsize in filter_sizes)
+{
+  v <- filter(x, sides=2, rep(1,fsize)/fsize)
+  plot(v)
+  title(fsize)
+}
+```
+
+\section{7. Differencing}
+Differencing a time series is useful to erase its trend and seasonal component. Given the additive series 
+$\left\{ y_i, i \geq 0\right\}$, in order to erase the trend we construct the series of differences $\left\{\nabla y_i = y_i - y_{i-1}, i \geq 1\right\}$. We can obtain higher order derivatives $\nabla^j y$ applying the differentiation recursively.
+Whereas to erase the seasonal component, we construct the series $\left\{\nabla_p y_i = y_i - y_{i-p}\right\}$, where $p$ is the length of the period. The two techniques can be combined, as shown in Figures \ref{fig:dy}, \ref{fig:dy12} and \ref{fig:ddy12}, where are respectively constructed the following time series: $\nabla y_i$, $\nabla_{12}y_i$, and $\nabla^2_{12}y_i$.
+
+```{r fig.cap="graph of first order derivatives with lag 1. \\label{fig:dy}"}
+y <- log(x)
+dy <- diff(y) # take first differences
+plot(dy, type="o", xlab = "time", ylab = "first differences")
+```
+
+```{r fig.cap="graph of first differences with lag 12. \\label{fig:dy12}"}
+de <- diff(y, lag=12)
+plot(de, xlab="time", type="o")
+```
+
+```{r fig.cap="graph of second order differences of lag 12. \\label{fig:ddy12}"}
+y <- log(x)
+dy12 <- diff(y, lag = 12)
+ddy12<-diff(dy12)
+plot (ddy12, xlab="time", type="o")
+```
+
+\section{8. Decomposing}
+Finally, we can automate the decomposition of a time series with a single instruction (\textit{decompose()}). The result is shown in figure \ref{fig:dec}.
+
+```{r fig.cap="decomposition of the time series. \\label{fig:dec}"}
+plot(decompose(xt))
+```
+

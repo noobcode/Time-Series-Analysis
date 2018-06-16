@@ -1,0 +1,134 @@
+---
+title: "Homework4: AR(1) model"
+author: "Carlo Alessi"
+output:
+  pdf_document:
+    fig_caption: yes
+    number_sections: true
+---
+\section{Simulating AR(1) models}
+An AR(1) process is a model for a time series $Y = \left\{ Y_j, j \in \mathbb{Z} \right\}$. Each $Y_j$ is defined as follows: 
+$$Y_j = \phi Y_{j-1} + Z_j, \forall j \in \mathbb{Z}, \phi \in \mathbb{R}$$ where Z is a centred white noise with variance $\sigma^2$. The AR(1) model is a well defined stationary process if and only if $\mid \phi \mid < 1$. In this section several time series, of different size $n$, will be simulated from AR(1) models varying the value of $\phi$.
+
+Figure \ref{fig:ar1_07} shows the correlogram of an AR(1) model with parameter $\phi = 0.7$.
+
+```{r, fig.cap="Autocorrelation function of AR(1) model with parameter 0.7. \\label{fig:ar1_07}"}
+n <- 1000
+a <- 0.7
+# simulate from and arima model
+# generate AR(1) model with parameter 0.7
+x <- arima.sim(list(order=c(1,0,0), ar=a), n)
+# compute its autocorrelation function
+# only until lag=long(n)=6 is completely reliable
+k = floor(log(n))
+acf(x,k)
+```
+
+Figure \ref{fig:ar1_05} shows the correlogram of an AR(1) model with $\phi = 0.5$.
+```{r fig.cap="Autocorrelation function of AR(1) model with parameter 0.5. \\label{fig:ar1_05}"}
+n <- 10000
+a <- 0.5
+x <- arima.sim(list(order=c(1,0,0), ar=a), n)
+k = floor(log(n))
+acf(x,k)
+```
+
+Figure \ref{fig:ar1_03} shows the correlogram of an AR(1) model with parameter $\phi = 0.3$.
+```{r fig.cap="Autocorrelation function of AR(1) model with parameter 0.3. \\label{fig:ar1_03}"}
+n <- 100000
+a <- 0.3
+x <- arima.sim(list(order=c(1,0,0), ar=a), n)
+k = floor(log(n))
+acf(x,k)
+```
+
+\subsection{Comparison between $\phi=0.1$ and $\phi=0.9$}
+In figure \ref{fig:ar_comp} are shown two correlograms of AR(1) models with parameters $\phi=0.1$ and $\phi=0.9$ respectively. It is clear to see that in the case of $\phi = 0.9$ the correlation remains high for different lags, whereas the correlation drops instantly with $\phi = 0.1$.
+```{r, fig.cap=c("Comparison of two correlograms of AR(1) model with parameter 0.1 (top) and 0.9 (bottom).\\label{fig:ar_comp}")}
+layout(1:2)
+
+n <- 1000
+a <- 0.1
+x <- arima.sim(list(order=c(1,0,0), ar=a), n)
+k = floor(log(n))
+acf(x,k)
+
+n <- 1000
+a <- 0.9
+x <- arima.sim(list(order=c(1,0,0), ar=a), n)
+k = floor(log(n))
+acf(x,k)
+```
+
+
+\section{Fitting AR(1) model}
+In the following code chunks different time series of size $n=10000$ are generated from different AR(1) models with parameters $\phi \in \left\{ 0.0, 0.3, 0.7, 0.8 \right\}$. Subsequently each generated time series will be fit with an AR(1) model using the Maximum Likelihood method.
+
+```{r}
+n <- 10000
+a <- 0.7
+x <- arima.sim(list(order=c(1,0,0), ar=a), n)
+# get estimation of the AR(1) parameter and the intercept.
+S1 <- arima(x, order=c(1,0,0), method="ML")
+S1
+```
+
+```{r}
+n <- 10000
+a <- 0.0
+x <- arima.sim(list(order=c(1,0,0), ar=a), n)
+# get estimation of the AR(1) parameter and the intercept.
+S2 <- arima(x, order=c(1,0,0), method="ML")
+S2
+```
+
+```{r}
+n <- 10000
+a <- 0.3
+x <- arima.sim(list(order=c(1,0,0), ar=a), n)
+# get estimation of the AR(1) parameter and the intercept.
+arima(x, order=c(1,0,0), method="ML")
+```
+
+```{r}
+n <- 10000
+a <- 0.8
+x <- arima.sim(list(order=c(1,0,0), ar=a), n)
+# get estimation of the AR(1) parameter and the intercept.
+arima(x, order=c(1,0,0), method="ML")
+```
+
+\section{Validation}
+In the following code chunk it is computed the Ljung-Box test of an AR(1) model of size $n=1000$ with parameter $\phi=0.7$. As it can be seen by the output, the white noise hypothesis has been rejected by far, since the p-value is much less than 0.05.
+```{r}
+n <- 1000
+a <- 0.7
+x <- arima.sim(list(order=c(1,0,0), ar=a), n)
+h <- floor(log(n))
+# the result should be reject (i.e. p-value < 0.05)
+Box.test(x, lag=h, type=c("Ljung-Box"))
+```
+The result of the Ljung-Box test is different when the parameter of the AR(1) model is as small as $\phi=0.1$ or $\phi=0.01$. The output of the code chunk below shows that the white noise hypotesis is accepted in these cases. The test gives a much higher p-value in the latter case.
+```{r}
+n <- 1000
+a <- 0.1
+x <- arima.sim(list(order=c(1,0,0), ar=a), n)
+
+a <- 0.01
+y <- arima.sim(list(order=c(1,0,0), ar=a), n)
+
+Box.test(x, lag=log(n), type=c("Ljung-Box"))
+Box.test(y, lag=log(n), type=c("Ljung-Box"))
+```
+
+In this last example first a time series of size $n=10000$ is generated from an AR(1) model with parameter $\phi = 0.7$. Then an AR(1) model is fit to the generated time series using the Maximum Likelihood method. Finally we apply the whithe noise test to the residuals of the fitted model. From the output it can be seen that the residuals are indeed an white noise.
+```{r}
+n <- 10000
+a <- 0.7
+x <- arima.sim(list(order=c(1,0,0), ar=a), n)
+s <- arima(x, order = c(1,0,0), method="ML")
+y <- resid(s) # extract model residuals
+# do we accept the null hypothesis of IID noise? yes
+Box.test(y, lag=log(n), type=c("Ljung-Box"))
+```
+

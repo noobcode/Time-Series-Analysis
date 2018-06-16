@@ -1,0 +1,121 @@
+---
+title: 'Practice 12: GARCH models'
+author: "Carlo Alessi"
+output:
+  html_document: default
+  pdf_document:
+    fig_caption: yes
+    number_sections: yes
+---
+
+\section{Nonlinear correlation and GARCH models}
+In this section it is analyzed the daily returns of the S\&P500 time series.
+From the Ljung-Box test we see that it is a white noise, since the p-value is greater than 0.05. The series and its ACF are shown in figure \ref{sp500}.
+```{r fig.cap="Plot of the SP500 time series and its ACF.\\label{sp500}"}
+library(MASS)
+data(SP500)
+
+layout(1:2)
+plot(SP500, type="l")
+acf(SP500)
+Box.test(SP500, type="Ljung-Box")
+```
+
+The following code subtracts the mean from the SP500 time series, obtaining the series $X-\mu$. The series is still a white noise. This can be seen from the ACF in figure \ref{centredsp500}.
+
+```{r, fig.cap="The zero-centred SP500 time series and its ACF.\\label{centredsp500}"}
+layout(1:2)
+m<-mean(SP500)
+x<-SP500-m
+plot(x, type="l")
+acf(x)
+```
+
+But squaring the centred series ($(X-\mu)^2$) makes the IID noise hypothesis to be rejected, since the $p\-value < 0.05$. This is also confirmed by the ACF in figure \ref{squared}, which shows that there are several significant correlations at different lags.
+
+```{r fig.cap="ACF of the $(X-\\mu)^2$.\\label{squared}"}
+y<-x^2
+acf(y)
+Box.test(y, type="Ljung-Box")
+```
+
+\section{Example of ARCH(1)}
+The following code block manually generates a time series of length $n=9999$ from an ARCH(1) model with parameters $\alpha_0 = 0.25$ and $\alpha_1 = 0.5$. The time series is shown in figure \ref{arch1model}.
+
+```{r fig.cap="ARCH(1) model with $\\alpha_0 = 0.25$ and $\\alpha_1 = 0.5$.\\label{arch1model}"}
+a0 <- 0.25
+a1 <- 0.5
+
+n = 9999
+x <- numeric(n)
+x0 <- rnorm(1)
+
+for (i in 1:n){
+  x0 <- rnorm(1, sd=sqrt(a0 + a1 * x0^2))
+  x[i] <- x0
+}
+
+plot(x, type="l")
+
+```
+
+\section{Example of GARCH(1,1)}
+The code below shows an alternative example for a GARCH(1, 1), with parameters $\alpha_0 = 0.1$, $\alpha_1 = 0.4$ and $\beta_1 = 0.2$. The generated time series $Y$ is shown in figure \ref{garch11} along with its ACF, and the ACF of $Y^2$.
+We can see that $Y^2$ is not an iid noise.
+ 
+```{r fig.cap="GARCH(1,1) model with $\\alpha_0 = 0.1$, $\\alpha_1 = 0.4$ and $\\beta_1 = 0.2$.\\label{garch11}"}
+n <- 10000
+a0 <- 0.1
+a1 <- 0.4
+b1 <- 0.2
+w <- rnorm(n)
+y <- rep(0,n)
+h <- rep(0,n)
+
+for(i in 2:n){
+  h[i] <- a0 + a1 * (y[i-1]^2) + b1 * h[i-1]
+  y[i] <- w[i] * sqrt(h[i])
+}
+
+layout(1:3)
+plot(y, type="l")
+acf(y, ylab="ACF y") 
+acf(y^2, ylab="ACF y^2")
+```
+
+\paragraph{Squaring the time series}
+The time series $X$ in the example related to figure \ref{arch1model} is a white noise, but $X^2$ is an AR(1) process. Figure \ref{xsquared} shows the squared time series, and compares its correlogram with the one of the original time series.
+
+```{r fig.cap="Plot of squared time series $X^2$, ACF of $X$ and ACF of $X^2$.\\label{xsquared}"}
+layout(1:3)
+y <- x^2
+plot(y, type="l")
+acf(x, ylab="ACF x")
+acf(y, ylab="ACF x^2")
+```
+
+\paragraph{Testing the IID hypothesis}
+Performing the Ljung-Box test on $X$ and $Y=X^2$ we see that the former is a white noise, while the latter is not.
+```{r}
+Box.test(x, lag = 10, type = c("Ljung-Box"))
+Box.test(y, lag = 10, type=c("Ljung-Box"))
+```
+
+\section{Fitting GARCH models}
+
+The following code chunk fits to the time series $X$ with the following models:
+\begin{itemize}
+\item ARCH(1)
+\item ARCH(2)
+\item GARCH(1,1)
+\end{itemize}
+
+The output of the code shows the parameters estimates for each model.
+
+```{r}
+library(tseries)
+garch(x,order=c(0,1),trace=F)
+garch(x,order=c(0,2),trace=F)
+garch(x,order=c(1,1),trace=F)
+```
+

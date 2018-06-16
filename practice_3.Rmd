@@ -1,0 +1,119 @@
+---
+title: "Testing IID and Gaussian characters"
+author: "Homework3: Carlo Alessi"
+output:
+  pdf_document:
+    fig_caption: yes
+---
+
+\section{1. Generate samples of length n of different IID noises}
+In this section first I generate 7 samples of length $n=1000$ from different IID noises. Succesively each sample is shown along with its histogram. The random variables $X_i$ for $i=1,...,7$ are randomly drawn from the following distributions:
+$$X_1 \sim N(3, 1)$$  $$X_2 \sim U(5, 10) $$ $$X_3 \sim exp(2)$$ $$X_4 \sim \chi^2(2) $$   $$X_5 \sim Poisson(3) $$   $$X_6 \sim Bin(5, 0.5)$$    $$X_7 \sim Geom(0.5)$$
+The code chuck below is used to generate the samples.
+
+```{r}
+n <- 1000
+s_norm <- rnorm(n, mean = 3, sd = 1)
+s_unif <- runif(n, min = 5, max =10)
+s_exp <- rexp(n, rate = 2)
+s_chi <- rchisq(n, df=2)
+s_pois <- rpois(n, lambda = 3)
+s_dbinom <- rbinom(n, size = 5, prob = 0.5) # 5 trials each with probability 0.5 of success
+s_geom <- rgeom(n, prob = 0.5)
+```
+
+Figure \ref{fig:norm} shows the sample generated from the normal distribution, $X_1$, and its histogram. We can see that there are enough samples to make the histogram shape resemble the shape of the underlying distribution. 
+
+```{r fig.cap="Normal distribution sample with mean 3 and standard deviation 1. \\label{fig:norm}"}
+layout(1:2)
+plot(s_norm, type="l")
+title("normal distribution sample, mean=3 and std=1")
+hist(s_norm)
+```
+
+In figure \ref{fig:unif} is shown the time series $X_2$, which was generated from the uniform distribution. It is clear to see that the histogram bins have more or less the same frequency. Also the values lie between the specified minimum and maximum value (5 and 10 respectively).
+
+```{r fig.cap="Uniform distribution sample with minimum value 5 and maximum value 10. \\label{fig:unif}"}
+layout(1:2)
+plot(s_unif, type="l")
+title("uniform distribution sample with min=5 and max=10")
+hist(s_unif)
+```
+
+Figure \ref{fig:exp} shows the time series $X_3$, drawn from an exponential distribution with rate 2. From the histogram it is clear to see that the exponential distribution is right-skewed, i.e. it forms a "tail" on the right part of the histogram.
+
+```{r fig.cap="Exponential distribution sample with rate 2. \\label{fig:exp}"}
+layout(1:2)
+plot(s_exp, type="l")
+title("exponential distribution sample with rate=2")
+hist(s_exp)
+```
+
+Figure \ref{fig:chi} shows the sample generated from the Chi-Square distribution. The Chi-Square distribution is also right-skewed, but its tail is much longer than the exponetial distribution.
+
+```{r fig.cap="Chi-Square distribution sample with 2 degrees of freedom. \\label{fig:chi}"}
+layout(1:2)
+plot(s_chi, type="l")
+title("Chi-Square distribution sample with 2 degrees of freedom")
+hist(s_chi)
+```
+
+In figure \ref{fig:poi} is shown the sample generated from the Poisson distribution, which is marginally right-skewed as well.
+
+```{r fig.cap="Poisson distribution sample with lambda 2. \\label{fig:poi}"}
+layout(1:2)
+plot(s_pois, type="l")
+title("Poisson distribution sample with lambda=3")
+hist(s_pois)
+```
+
+Figure \ref{fig:bin} shows the sample drawn from the binomial distribution with $n=5$ trials, each with probability $p=0.5$ of success. From the histogram we can see that very few observations achieved 5 plain successes/failures. Whereas the majority of the observations achieved 2 or 3 successes, which is reasonable since the expected value is 2.5.
+
+```{r fig.cap="Binomial distribution sample. Five trials each with probability 0.5 of success. \\label{fig:bin}"}
+layout(1:2)
+plot(s_dbinom, type="l")
+title("Binomial distribution sample, 5 trials with p=0.5")
+hist(s_dbinom)
+```
+
+Finally figure \ref{fig:geom} shows the time series generated from a geometric distribution where the probability of success of each trial is $p=0.5$. The histogram is very right-skewed, since most of the observations achieve a success after 1 or 2 trials. Specifying $p=0.5$ is very unlikely that after 4 trials the result of the experiment gives a failure. 
+
+```{r fig.cap="Geometric distribution sample with probability 0.5 of success. \\label{fig:geom}"}
+layout(1:2)
+plot(s_geom, type="l")
+title("Geometric distribution sample with p=0.5")
+hist(s_geom)
+```
+
+\section{2. Test the IID character of a sample with the Ljung-Box test}
+In this section we test if a time series is an IID noise using the Ljung-Box test. The test is defined as: $$ Q_{LB} := n(n+2)\sum_{j=1}^{h} \frac{\hat{\rho}^2(j)}{n-j} $$ where $n$ is the length of the time series and $\hat{\rho}$ is the empirical auto-correlation. Then given the result, $q = Q_{LB}(l)$, where $l$ is the lag, we reject the IID hypothesis if 
+$p = P ( Q_{LB} > q )$ 
+is less than 0.05. In the following code chunk the test is applied for different values of lags $l \in \left\{0,...,log(n)\right\}$. The output of the code suggests that the sample at hand is an IID noise, since the p-value is greater than 0.05 for each lag.  
+
+```{r}
+log(n)
+Box.test(s_norm, lag = 1, type=c("Ljung-Box"))
+Box.test(s_norm, lag = 2, type=c("Ljung-Box"))
+Box.test(s_norm, lag = 3, type=c("Ljung-Box"))
+Box.test(s_norm, lag = 4, type=c("Ljung-Box"))
+Box.test(s_norm, lag = 5, type=c("Ljung-Box"))
+Box.test(s_norm, lag = 6, type=c("Ljung-Box"))
+```
+
+\section{3. Test the normal character of a simulated Gaussian white noise using the Q-Q-plot}
+In this section I generate two IID noise, $X \sim N(2,3)$ and $Y \sim U(0,1)$, and then test if they are actually Gaussian white noise. In order to do that it is used the Quantile-Quantile plot and it is applied the Shapiro-Wilks test.
+Figure \ref{fig:qq_1} and Figure \ref{fig:qq_2} show respectively the QQ plot for the time series $X$ and $Y$. It is clear that the linear relationship is stronger for the Gaussian sample with respect to the Uniform one. Moreover the test results for $X$ and $Y$ yeald a p-value of respectvely 0.5394 and 7.751e-05. In conclusion the null hypothesis that the sample is a Gaussian white noise is accepted in the first case, because the p-value is >= 0.05. It is rejected in the second.
+```{r fig.cap=c("QQ plot of a sample of gaussian distribution. \\label{fig:qq_1}","QQ plot of a sample of uniform distribution. \\label{fig:qq_2}")}
+x_normal <- rnorm(100, mean = 2, sd =3)
+qqnorm(x_normal)
+qqline(x_normal) # add a line that passes through the first and third quartiles
+
+y_uniform <-runif(100, 0, 1)
+qqnorm(y_uniform)
+qqline(y_uniform)
+```
+
+```{r}
+shapiro.test(x_normal)
+shapiro.test(y_uniform)
+```

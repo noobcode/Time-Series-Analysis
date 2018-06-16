@@ -1,0 +1,118 @@
+---
+title: "Practice 6: Simulating and fitting ARIMA models"
+author: "Carlo Alessi"
+output:
+  pdf_document:
+    fig_caption: yes
+    number_sections: true
+---
+The goal of this practice is to identify a possible ARIMA model to a given data, to fit it and to validate it as a good model.
+
+\section{Simulation of a model}
+In the following code I simulate 3 time series respectively from:
+\begin{itemize}
+\item AR(1) model with parameter $\phi=0.7$, 
+\item MA(2) model with parameters $\theta_1 = – 1.5$ and $\theta_2 = – 0.75$, 
+\item ARMA(2,1) model with parameters $(\phi_1,\phi_2) = (0.3,0.2)$ and $\theta = – 0.3$.
+\end{itemize}
+
+```{r}
+n = 10000
+SIM1<-arima.sim(list(order=c(1,0,0), ar=0.7),n)
+SIM2<-arima.sim(list(order=c(0,0,2), ma=c(1.5,0.75)),n)
+SIM3<-arima.sim(list(order=c(2,0,1), ar=c(0.3,0.2), ma=0.3), n)
+```
+
+The plots of the time series generated above are shown in figure \ref{fig:time_series}.
+
+```{r, fig.cap="Time series SIM1, SIM2, SIM3.\\label{fig:time_series}"}
+layout(1:3)
+plot(SIM1, type="l")
+plot(SIM2, type="l")
+plot(SIM3, type="l")
+```
+
+\section{Heuristic identification of the model. Auto-correlation and partial auto-correlation functions}
+The autocorrelation and partial correlation functions of the time series SIM1, SIM2 and SIM3 are shown respectively in figure \ref{fig:auto_sim1}, \ref{fig:auto_sim2} and \ref{fig:auto_sim3}.
+
+```{r fig.cap="Autocorrelation and partial autocorrelation function for SIM1.\\label{fig:auto_sim1}"}
+layout(2:1)
+k = log(n)
+acf(SIM1, k)
+pacf(SIM1, k)
+```
+```{r fig.cap="Autocorrelation and partial autocorrelation function for SIM2.\\label{fig:auto_sim2}"}
+layout(2:1)
+k = log(n)
+acf(SIM2, k)
+pacf(SIM2, k)
+```
+```{r fig.cap="Autocorrelation and partial autocorrelation function for SIM3.\\label{fig:auto_sim3}"}
+layout(2:1)
+k = log(n)
+acf(SIM3, k)
+pacf(SIM3, k)
+```
+
+\section{Fitting a model}
+To determine the parameters $p$ and $q$ of an $ARMA(p,q)$ model we can look at the plots of the autocorrelation function (ACF) and partial autocorrelation function (PACF). A good value of $p$ is the maximum lag at which the PACF is significant, whereas a good value of $q$ is the maximum lag at which the ACF is significant.
+
+In the code chunks below the time serieses SIM1, SIM2 and SIM3 are fitted respectively with ARMA(1,8), ARMA(0,2) and ARMA(1,4) models.
+
+```{r}
+S1 <- arima(SIM1, order=c(1,0,8), method="ML")
+S1
+```
+
+```{r}
+S2 <- arima(SIM2, order=c(0,0,2), method="ML")
+S2
+```
+
+```{r}
+S3 <- arima(SIM3, order=c(1,0,4), method="ML")
+S3
+```
+
+\section{Validation}
+First we apply the Ljung-Box test to the serieses SIM1, SIM2 and SIM3. The IID noise hypothesis is rejected in all of them. This suggests that the serieses are stationary. 
+Then to validate the fitted models as good models the residuals must be IID noise. The Ljung-Box applied to the residuals gives a p-value greater than 0.05 for all models.
+
+```{r}
+Box.test (SIM1, lag = log(n), type = c("Ljung-Box"))
+Box.test (SIM2, lag = log(n), type = c("Ljung-Box"))
+Box.test (SIM3, lag = log(n), type = c("Ljung-Box"))
+```
+
+```{r}
+y <- resid(S1)
+Box.test(y, lag = log(n), type = c("Ljung-Box"))
+
+y <- resid(S2)
+Box.test(y, lag = log(n), type = c("Ljung-Box"))
+
+y <- resid(S3)
+Box.test(y, lag = log(n), type = c("Ljung-Box"))
+```
+
+\section{Example}
+Figure \ref{fig:example} shows a complete example. The time series is generated from an ARMA(2,1) model with paramenters $\phi_1 =0.3$, $\phi_2 = 0.2$ and $\theta = - 0.3$. The time series is then fitted with a ARMA(2,1) model, whose residuals are IID noise.
+```{r fig.cap="ARMA(2,1) model with parameters $(\\phi_1, \\phi_2) = (0.3,0.2)$ and $\\theta=-0.3$, autocorrelation and partial autocorrelation function.\\label{fig:example}"}
+layout(3:1)
+n<-10000
+s3<-arima.sim(list(order=c(2,0,1),ar=c(0.3,0.2),ma=0.3), n)
+plot(s3, type="l")
+
+acf(s3, log(n))
+pacf(s3, log(n))
+
+p3<-arima(s3,order=c(2,0,1),method="ML")
+p3
+h<-log(n)
+
+Box.test(s3,lag=h,type=c("Ljung-Box"))
+y<-resid(p3)
+Box.test(y,lag=h,type=c("Ljung-Box"))
+```
+
+
